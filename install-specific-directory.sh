@@ -129,53 +129,25 @@ sudo chcon -R -t httpd_sys_script_rw_t /var/nagios/rw/
 #
 ################################################################################
 echo 'Building and implementing SELinux policies...'
-# Generate 3 policies to allow Nagios' web UI to make changes
+# Generate a policy to allow Nagios' web UI to make changes
 cd /tmp/
-cat >> NagiosCmdRule1.te << EOF
-module NagiosCmdRule1 1.0;
+cat >> nagios_write_file.te << EOF
+module nagios_write_file 1.0;
 
 require {
 	type httpd_t;
 	type httpd_sys_rw_content_t;
-	class fifo_file getattr;
+	class fifo_file { getattr write open };
 }
 
 #============= httpd_t ==============
-allow httpd_t httpd_sys_rw_content_t:fifo_file getattr;
+allow httpd_t httpd_sys_rw_content_t:fifo_file { getattr write open };
 EOF
-make -f /usr/share/selinux/devel/Makefile ./NagiosCmdRule1.pp > /dev/null 2>&1
 
-cat >> NagiosCmdRule2.te << EOF
-module NagiosCmdRule2 1.0;
-
-require {
-	type httpd_t;
-	type httpd_sys_rw_content_t;
-	class fifo_file write;
-}
-
-#============= httpd_t ==============
-allow httpd_t httpd_sys_rw_content_t:fifo_file write;
-EOF
-make -f /usr/share/selinux/devel/Makefile ./NagiosCmdRule2.pp > /dev/null 2>&1
-
-cat >> NagiosCmdRule3.te << EOF
-module NagiosCmdRule3 1.0;
-
-require {
-	type httpd_t;
-	type httpd_sys_rw_content_t;
-	class fifo_file open;
-}
-
-#============= httpd_t ==============
-allow httpd_t httpd_sys_rw_content_t:fifo_file open;
-EOF
-make -f /usr/share/selinux/devel/Makefile ./NagiosCmdRule3.pp > /dev/null 2>&1
-
-semodule -i ./NagiosCmdRule1.pp > /dev/null 2>&1
-semodule -i ./NagiosCmdRule2.pp > /dev/null 2>&1
-semodule -i ./NagiosCmdRule3.pp > /dev/null 2>&1
+checkmodule -M -m -o nagios_write_file.mod nagios_write_file.te > /dev/null 2>&1
+semodule_package -o nagios_write_file.pp -m nagios_write_file.mod \
+		> /dev/null 2>&1
+semodule -i ./nagios_write_file.pp > /dev/null 2>&1
 
 rm -f ./NagiosCmdRule*
 #                                                                              #
