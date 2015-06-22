@@ -1,0 +1,4 @@
+master:
+  - 192.168.211.2
+
+master_alive_interval: 9000
